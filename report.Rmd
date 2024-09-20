@@ -146,11 +146,11 @@ summary(fit4, pars=c("mu","delta","sigma_within","sigma_between","sigma_within_s
 
 # Comments
 
-These all assume a flat prior for all the parameters, except for the last model for `sigma_within`. This is the lazy unthinking working assumption. The last model, was tripped up by this allowing unrealistic large values, and so a gamma distribution prior was added, with an expectation of 10, and 95% CI of 3.3 -- 20.5,  otherwise convergence issue arose. 
+These all assume a flat prior for all the parameters. This is the lazy unthinking working assumption. 
 
 There is evidence to support heterogeniety being present for both the location and variance. 
 
-The difference between the groups is statistically significant (for the frequentist first model). The other models are Bayesian, and so p-values don't exist, but give credible intervals well away from zero.  They are all centred around 26-28 point estimates for the difference, the optimal group being lower.  The credible intervals widen, but nonethelss exclude 0,  for the models that incorporate the heterogeniety in location, which has a standard deviation of 7/9 (models 2/4),  comparable in size to the between-patient SD. 
+The difference between the groups is statistically significant (for the frequentist first model). The other models are Bayesian, and so p-values don't exist, but give credible intervals well away from zero.  They are all centred around 26-28 point estimates for the difference, the optimal group being lower.  The credible intervals widen, but nonethelss exclude 0,  for the models that incorporate the heterogeniety in location, which has a standard deviation of 9 ( `sigma_between` models 2/4),  comparable in size to the between-patient SD (`sigma_within` around 7.5). 
 
 
 

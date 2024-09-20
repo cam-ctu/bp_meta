@@ -34,9 +34,10 @@ transformed parameters {
   vector[N] theta;
   theta = mu + x*delta + eta;
   vector[N] rss;
+  vector[N] se_study;
   for( i in 1:N){
-  rss[i]=sample[i]^2*se[i]^2/sigma_study[i]^2 ;
-  
+    rss[i]=sample[i]^2*se[i]^2/sigma_study[i]^2 ;
+    se_study[i]= sigma_study[i]/ sqrt(sample[i]);
   }
   real sigma_within_se;
   sigma_within_se= sqrt( sigma_within/nu);
@@ -47,11 +48,11 @@ transformed parameters {
 // 'y' to be normally distributed with mean 'mu'
 // and standard deviation 'sigma'.
 model {
-  y ~ normal(theta, sigma_within/sqrt(sample));
+  y ~ normal(theta, se_study);
   rss ~ chi_square(sample-1);
   eta ~ normal(0, sigma_between);
   sigma_study ~ gamma( sigma_within*nu, nu );
-  sigma_within~ gamma( 10*0.5,0.5);
+ // sigma_within~ gamma( 10*0.5,0.5);
 }
 
 
