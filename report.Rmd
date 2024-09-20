@@ -1,0 +1,156 @@
+---
+title: "SBP in Young Adults"
+author: "Simon Bond"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Set up
+
+First load in the data (I slightly edited it) and load some libraries
+
+```{r cars}
+library(tidyverse)
+library(nlme)
+library(rstan)
+library(bayesplot)
+
+df <- read.csv(file="Central SBP in young ISH_v2.csv") %>% 
+  cctu::clean_names() %>% 
+  mutate(se=sd/sqrt(n),
+         weights=se^2
+         )
+summary(df)
+
+```
+
+# Basic analysis
+
+This start with the assumption that $y_i \sim N( \mu, \sigma_{i}^2/n)$ in the hypertensive studies, 
+and $y_i \sim N( \mu+ \delta, \sigma_{i}^2/n)$  in the optimal group. The standard deviation is $\sigma$,  and is assumed here to be a known fixed parameter. Also there is no heterogeniety between studies, akin to assuming you simply took seperate samples with identicial treatments,  from and identical population,  for each study. 
+
+A basic frequentest analysis can be done that uses the fixed standard deviation. 
+
+
+```{r gls, echo=FALSE}
+m0 <- gls(mean~group, weights=~weights, data=df,control=glsControl(sigma=1)) 
+m0 %>%  summary
+```
+
+
+# Extensions
+
+We want to relax the assumptions made above. 
+
+1. acknowledge there is sample variability in the standard deviations. IN fact theory says $n \hat{\sigma}^2 \sim \sigma_{within}^2 \Chi^2_{n-1}$
+2. Allow the location to vary randomly between studies by $\eta_{i} \sim N(0, \sigma^2_{between})$
+3. Allow also the between-patient SD to vary between studies  $\sigma_{within,i} \sim \Gamma(  \sigma_{within}\nu, \nu )$
+
+These need Bayesian MCMC software to fit.  The R code is shown below, which in turn relies on individual files, contained in the folder  ( m0.stan, m1.stan, m2.stan, m4.stan).
+
+
+```{r mcmc, eval=FALSE }
+
+
+df_stan <- list(
+  N = nrow(df),
+  y=df$mean,
+  x=1*(df$group=="optimal"),
+  se=df$se,
+  sample=df$n
+)
+
+
+fit0 <- stan(
+  file = "m0.stan",  # Stan program
+  data = df_stan,    # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 2000,            # total number of iterations per chain
+  cores = 2,              # number of cores (could use one per chain)
+  refresh = 100             # no progress shown
+)
+  
+fit1 <- stan(
+  file = "m1.stan",  # Stan program
+  data = df_stan,    # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 2000,            # total number of iterations per chain
+  cores = 2,              # number of cores (could use one per chain)
+  refresh = 100             # no progress shown
+)
+save.image("fits.Rdata")
+load("fits.Rdata")
+
+fit2 <- stan(
+  file = "m2.stan",  # Stan program
+  data = df_stan,    # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 2000,            # total number of iterations per chain
+  cores = 2,              # number of cores (could use one per chain)
+  refresh = 100             # no progress shown
+)
+
+summary(fit2, pars=c("mu","delta","sigma_within","sigma_between"))
+
+renv::install("bayesplot")
+library(bayesplot)
+mcmc_areas(fit3,pars=my_pars)
+mcmc_areas(fit3,pars="sigma_within")
+mcmc_areas(fit3,pars="delta")
+traceplot(fit3, pars=my_pars)
+summary(fit3, c(my_pars,"sigma_within_se"))
+summary(fit2, pars=c("mu","delta","sigma_within","sigma_between"))
+
+
+
+fit4 <- stan(
+  file = "m4.stan",  # Stan program
+  data = df_stan,    # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 2000,          # number of warmup iterations per chain
+  iter = 10000,            # total number of iterations per chain
+  cores = 2,              # number of cores (could use one per chain)
+  refresh = 500             # no progress shown
+)
+
+save.image("fits.Rdata")
+```
+
+We ran the code earliear (each fit takes abotu 5 mins) saved the results, which is now re-loaded
+
+In turn this 
+
+1. Replicates the analysis above
+2. Acknowledges sampling variability in the standard deviations
+3. Adds in between-study heterogeneity in the location 
+4.  Adds in between-study heterogeneity in the variance
+
+```{r inspect}
+load("fits.Rdata")
+
+
+summary(fit0, pars=c("mu","delta"))$summary %>% knitr::kable(digits = 2)
+summary(fit1, pars=c("mu","delta","sigma_within"))$summary%>% knitr::kable(digits = 2)
+summary(fit2, pars=c("mu","delta","sigma_within", "sigma_between"))$summary%>% knitr::kable(digits = 2)
+summary(fit4, pars=c("mu","delta","sigma_within","sigma_between","sigma_within_se"))$summary%>% knitr::kable(digits = 2)
+
+```
+
+
+# Comments
+
+These all assume a flat prior for all the parameters, except for the last model for `sigma_within`. This is the lazy unthinking working assumption. The last model, was tripped up by this allowing unrealistic large values, and so a gamma distribution prior was added, with an expectation of 10, and 95% CI of 3.3 -- 20.5,  otherwise convergence issue arose. 
+
+There is evidence to support heterogeniety being present for both the location and variance. 
+
+The difference between the groups is statistically significant (for the frequentist first model). The other models are Bayesian, and so p-values don't exist, but give credible intervals well away from zero.  They are all centred around 26-28 point estimates for the difference, the optimal group being lower.  The credible intervals widen, but nonethelss exclude 0,  for the models that incorporate the heterogeniety in location, which has a standard deviation of 7/9 (models 2/4),  comparable in size to the between-patient SD. 
+
+
+

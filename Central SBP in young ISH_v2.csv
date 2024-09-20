@@ -1,0 +1,14 @@
+Study,n,mean,SD,group
+Enigma - optimal BP group,1308,94,7,optimal
+"O'Rourke et al, 2000",6,119,6,hypertensive
+"Mahmud & Feely, 2003",11,116,3,hypertensive
+"McEniery et al, 2005",93,120,6,hypertensive
+"Hulsen et al, 2006",57,117,5,hypertensive
+"Saladini et al, 2011",33,114,6,hypertensive
+"Pucci et al, 2012",34,130,10,hypertensive
+"Radchenko et al, 2016",17,124,7,hypertensive
+"Litwin et al, 2017",27,135,9,hypertensive
+"Schattenkerk et al, 2018",109,120,13,hypertensive
+"Nakagomi et al, 2020",25,124,5,hypertensive
+"Chuang et al, 2021",21,141,7,hypertensive
+"Kim et al, 2021",33,112,9,hypertensive
